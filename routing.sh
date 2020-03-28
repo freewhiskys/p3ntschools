@@ -8,8 +8,8 @@ case "$1" in
     echo 1 > /proc/sys/net/ipv4/ip_forward
     ;;
   stop)
-    iptables -t nat -D POSTROUTING --out-interface enp0s3 -j MASQUERADE
-    iptables -D FORWARD --in-interface enp0s8 -j ACCEPT
+    iptables -t nat -D POSTROUTING --out-interface eth0 -j MASQUERADE
+    iptables -D FORWARD --in-interface eth0 -j ACCEPT
     echo 0 > /proc/sys/net/ipv4/ip_forward
     ;;
   *)

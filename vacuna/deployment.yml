@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-app
+  labels:
+    name: deployment
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 2
+  selector:
+    matchLabels:
+      name: templated-pod
+  template:
+    metadata:
+      name: deployment-template
+      labels:
+        name: templated-pod
+    spec:
+      volumes:
+        - name: app-files
+          emptyDir: {}
+
+        - name: nginx-config-volume
+          configMap:
+            name: nginx-config
+
+        - name: task-pv-storage
+          persistentVolumeClaim:
+            claimName: task-pv-claim
+
+      containers:
+        - image: wildscamp/vsftpd
+          name: ftp
+          ports:
+          - containerPort: 21
+            protocol: TCP
+            name: "ftp-server"
+          volumeMounts:
+          - mountPath: "/home/miguel"
+            name: task-pv-storage
+          env:
+          - name: VSFTPD_USER_1
+            value: "master:123::"
+          - name: VSFTPD_USER_2
+            value: "miguel:123:root:"
+
+        - image: mozo95/p3nt:phpv1
+          name: app
+          volumeMounts:
+            - name: app-files
+              mountPath: /var/www/html
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "cp -r /app/. /var/www/html"]
+                                                                                                                                                                                                    - image: nginx:latest                                                                                                                                                                         name: nginx
+          volumeMounts:
+            - name: app-files
+              mountPath: /var/www/html
+            - name: nginx-config-volume
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+
+          ports:
+          - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 3
+            successThreshold: 1
+
+      imagePullSecrets:
+      - name: regcred
